@@ -1,6 +1,7 @@
 package ua.onpu;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import ua.onpu.model.*;
@@ -19,13 +20,31 @@ public class DataBaseControl {
     @Autowired
     private AssigmentRepository assigmentRepository;
 
-    public void makeRemind(Message message) {
+    public void makeRemind(Message message) throws DataAccessException {
         Task task = new Task();
         task.setTaskText(message.getText());
         taskRepository.save(task);
 
         Assigment assigment = new Assigment();
 
+        User user = userRepository.findById(message.getChatId()).get();
+
+        assigment.setUser(user);
+        assigment.setTask(task);
+        assigmentRepository.save(assigment);
+    }
+
+    public List<Task> showList(Message message) {
+        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(message.getChatId());
+        List<Task> taskList = new ArrayList<>();
+        for (Assigment a : assigments) {
+            taskList.add(a.getTask());
+        }
+
+        return taskList;
+    }
+
+    public void registerUser(Message message) {
         if (userRepository.findById(message.getChatId()).isEmpty()) {
             User user = new User();
             user.setChatId(message.getChatId());
@@ -33,27 +52,6 @@ public class DataBaseControl {
             user.setRegisteredAt(LocalDateTime.now());
 
             userRepository.save(user);
-
-            assigment.setUser(user);
-            assigment.setTask(task);
-            assigmentRepository.save(assigment);
-        } else {
-            User user = userRepository.findById(message.getChatId()).get();
-
-            assigment.setUser(user);
-            assigment.setTask(task);
-            assigmentRepository.save(assigment);
         }
     }
-
-    public void showList(Message message){
-        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(message.getChatId());
-        List<Task> taskList = new ArrayList<>();
-        for(Assigment a : assigments){
-            taskList.add(a.getTask());
-        }
-
-        System.out.println(taskList);
-    }
-
 }
