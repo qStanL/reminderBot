@@ -29,6 +29,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfiguration configuration;
     @Autowired
     private DataBaseControl dataBaseControl;
+    private Statements state = Statements.START;
     private static final String HELP_TEXT = "coming soon";
 
     public TelegramBot(BotConfiguration configuration) {
@@ -36,8 +37,6 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "start bot"));
-        botCommands.add(new BotCommand("/list", "todo list"));
-        botCommands.add(new BotCommand("/help", "how to use this bot"));
         validate(new SetMyCommands(botCommands, new BotCommandScopeDefault(), null));
     }
 
@@ -56,26 +55,48 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String chatId = update.getMessage().getChatId().toString();
-
-            String[] userMessage = update.getMessage().getText().split(" ");
-
-            String command = userMessage[0];
-            String userText = String.join(" ", Arrays.copyOfRange(userMessage, 1, userMessage.length));
-
-            System.out.println(command);
-            switch (command) {
-                case "/start":
-                    startCommand(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option" + ":blush:"));
+            String command = update.getMessage().getText();
+            switch (state) {
+                case START:
+                    if(command.equals("/start")){
+                        startCommand(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option" + ":blush:"));
+                    }
+                    else if (command.equals("Reminder list")){
+                        state = Statements.VIEW;
+                        dataBaseControl.showList(update.getMessage());
+                    }
+                    else if(command.equals("Make a new reminder")){
+                        state = Statements.CREATE;
+                        sendMessage(chatId, "Write your reminder");
+                    }
+                    else if(command.equals("Delete reminder")) {
+                        state = Statements.DELETE_CONFIRMATION;
+                        sendMessage(chatId, "Select the reminder you want to delete");
+                        dataBaseControl.showList(update.getMessage());
+                    } else {
+                        startCommand(chatId, EmojiParser.parseToUnicode("Please choose the option" + ":blush:"));
+                    }
                     break;
-                case "/help":
-                    sendMessage(chatId, HELP_TEXT);
+                case CREATE:
+                    dataBaseControl.makeRemind(update.getMessage());
+                    state = Statements.START;
                     break;
-                case "/newremind":
-                    //dataBaseControl.makeRemind(update.getMessage(), userText);
-                    dataBaseControl.taskList(update.getMessage());
+                case VIEW:
+                    sendMessage(chatId, "VIEW");
+                    break;
+                case EDIT:
+                    sendMessage(chatId, "EDIT");
+                    break;
+                case DELETE_CONFIRMATION:
+                    sendMessage(chatId, "DELETE CONF");
+                    break;
+                case COMPLETE:
+                    sendMessage(chatId, "COMPLETE");
+                    break;
             }
         }
     }
+
 
     // Стартовые кнопки
     private void startCommand(String chatId, String text) {

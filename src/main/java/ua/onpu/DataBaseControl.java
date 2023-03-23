@@ -19,9 +19,9 @@ public class DataBaseControl {
     @Autowired
     private AssigmentRepository assigmentRepository;
 
-    public void makeRemind(Message message, String remind) {
+    public void makeRemind(Message message) {
         Task task = new Task();
-        task.setTaskText(remind);
+        task.setTaskText(message.getText());
         taskRepository.save(task);
 
         Assigment assigment = new Assigment();
@@ -46,7 +46,7 @@ public class DataBaseControl {
         }
     }
 
-    public void taskList(Message message){
+    public void showList(Message message){
         List<Assigment> assigments = assigmentRepository.findAllByUserChatId(message.getChatId());
         List<Task> taskList = new ArrayList<>();
         for(Assigment a : assigments){
