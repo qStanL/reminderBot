@@ -13,10 +13,8 @@ import java.time.LocalDateTime;
 @ToString
 public class Task {
     @Id
+    @GeneratedValue
     private long taskId;
-    @ManyToOne
-    @JoinColumn(name = "chat_id", nullable = false)
-    private User user;
     @Column(nullable = false)
     private String taskText;
     private LocalDateTime taskDeadline;

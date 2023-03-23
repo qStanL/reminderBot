@@ -12,6 +12,7 @@ import javax.persistence.*;
 @ToString
 public class Assigment {
     @Id
+    @GeneratedValue
     private long assigmentId;
     @ManyToOne
     @JoinColumn(name = "task_id", nullable = false)
@@ -19,5 +20,6 @@ public class Assigment {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
 
 }

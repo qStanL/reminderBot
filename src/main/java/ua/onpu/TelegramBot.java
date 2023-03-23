@@ -3,31 +3,24 @@ package ua.onpu;
 
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.log4j.Log4j;
-import org.checkerframework.checker.units.qual.A;
-import org.glassfish.grizzly.http.util.TimeStamp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updates.GetUpdates;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.onpu.configuration.BotConfiguration;
-import ua.onpu.configuration.BotInit;
 import ua.onpu.model.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Component
 @Log4j
@@ -35,11 +28,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     final BotConfiguration configuration;
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private TaskRepository taskRepository;
-    @Autowired
-    private AssigmentRepository assigmentRepository;
+    private DataBaseControl dataBaseControl;
     private static final String HELP_TEXT = "coming soon";
 
     public TelegramBot(BotConfiguration configuration) {
@@ -66,52 +55,26 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
 
-            switch (messageText) {
+            String[] userMessage = update.getMessage().getText().split(" ");
+
+            String command = userMessage[0];
+            String userText = String.join(" ", Arrays.copyOfRange(userMessage, 1, userMessage.length));
+
+            System.out.println(command);
+            switch (command) {
                 case "/start":
                     startCommand(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option" + ":blush:"));
                     break;
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
                     break;
-                case "Make a new reminder":
-                    sendMessage(chatId, "Write your remind");
-                    // TODO: Как то считать сообщение пользователя
-                    break;
+                case "/newremind":
+                    //dataBaseControl.makeRemind(update.getMessage(), userText);
+                    dataBaseControl.taskList(update.getMessage());
             }
-        } else if (update.hasCallbackQuery()) {
-            sendMessage(update.getCallbackQuery().getMessage().getChatId().toString(), update.getCallbackQuery().getData());
         }
-    }
-    // Создание записи таска в БД
-    private void makeRemind(Message message) {
-        Task task = new Task();
-        task.setTaskText(message.getText());
-        taskRepository.save(task);
-
-        Assigment assigment = new Assigment();
-
-        if(userRepository.findById(message.getChatId()).isEmpty()){
-            User user = new User();
-            user.setChatId(message.getChatId());
-            user.setUserName(message.getChat().getUserName());
-            user.setRegisteredAt(LocalDateTime.now());
-
-            userRepository.save(user);
-
-            assigment.setUser(user);
-            assigment.setTask(task);
-            assigmentRepository.save(assigment);
-        } else {
-            User user = userRepository.findById(message.getChatId()).get();
-
-            assigment.setUser(user);
-            assigment.setTask(task);
-            assigmentRepository.save(assigment);
-        }
-
     }
 
     // Стартовые кнопки
@@ -173,4 +136,5 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error("Error: " + e.getMessage());
         }
     }
+
 }
