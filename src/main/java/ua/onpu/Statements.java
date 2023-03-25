@@ -5,6 +5,6 @@ public enum Statements {
     CREATE,
     VIEW,
     EDIT,
-    DELETE_CONFIRMATION,
+    DELETE,
     COMPLETE
 }

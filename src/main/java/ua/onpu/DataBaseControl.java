@@ -54,4 +54,11 @@ public class DataBaseControl {
             userRepository.save(user);
         }
     }
+
+    public void updateTask(String taskID, String text) {
+        Task task = taskRepository.findByTaskId(Long.parseLong(taskID));
+        task.setTaskText(text);
+
+        taskRepository.save(task);
+    }
 }
