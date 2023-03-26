@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -22,18 +21,21 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.onpu.configuration.BotConfiguration;
 import ua.onpu.model.Task;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @Log4j
 public class TelegramBot extends TelegramLongPollingBot {
 
     final BotConfiguration configuration;
-    @Autowired
+
     private DataBaseControl dataBaseControl;
-    private Statements state = Statements.START;
-    private StringBuilder taskID;
+    private Statements state;
+    private final Map<String, String> taskID;
 
     public TelegramBot(BotConfiguration configuration) {
         this.configuration = configuration;
@@ -41,6 +43,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "start bot"));
         validate(new SetMyCommands(botCommands, new BotCommandScopeDefault(), null));
+        taskID = new HashMap<>();
+        state = Statements.START;
+    }
+
+    @Autowired
+    public void setDataBaseControl(DataBaseControl dataBaseControl) {
+        this.dataBaseControl = dataBaseControl;
     }
 
     @Override
@@ -65,12 +74,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case START:
                     switch (command) {
                         case "/start":
-                            dataBaseControl.registerUser(update.getMessage());
+                            try {
+                                dataBaseControl.registerUser(update.getMessage());
+                            } catch (DataAccessException e) {
+                                log.error(e.getMessage());
+                            }
                             sendMessage(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option" + ":blush:"), startStateKeyboard());
                             break;
                         case "Reminder list":
                             state = Statements.VIEW;
-                            sendMessage(chatId, "Your reminder list", viewStateKeyboard(dataBaseControl.showList(update.getMessage())));
+                            sendMessage(chatId, "Your reminder list", viewStateKeyboard(dataBaseControl.showList(update)));
                             break;
                         case "Make a new reminder":
                             state = Statements.CREATE;
@@ -78,7 +91,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             break;
                         case "Delete reminder":
                             state = Statements.DELETE;
-                            sendMessage(chatId, "Select the reminder you want to delete", viewStateKeyboard(dataBaseControl.showList(update.getMessage())));
+                            sendMessage(chatId, "Select the reminder you want to delete", viewStateKeyboard(dataBaseControl.showList(update)));
                             break;
                         default:
                             sendMessage(chatId, EmojiParser.parseToUnicode("Please choose the option" + ":blush:"), startStateKeyboard());
@@ -101,31 +114,32 @@ public class TelegramBot extends TelegramLongPollingBot {
                             sendMessage(chatId, "Write your reminder", new ReplyKeyboardRemove(true));
                             break;
                         case "Reminder list":
-                            Message message = update.getMessage();
-                            System.out.println(message.getText());
+                            sendMessage(chatId, "Your reminder list", viewStateKeyboard(dataBaseControl.showList(update)));
                             break;
                     }
                     break;
                 case EDIT:
-                    dataBaseControl.updateTask(String.valueOf(taskID), update.getMessage().getText());
-                    sendMessage(chatId, "Your updated list", viewStateKeyboard(dataBaseControl.showList(update.getMessage())));
-                    state = Statements.START;
-                    break;
-                case DELETE:
-                    sendMessage(chatId, "DELETE CONF");
-                    break;
-                case COMPLETE:
-                    sendMessage(chatId, "COMPLETE");
+                    String taskID = this.taskID.get(chatId);
+                    try {
+                        dataBaseControl.updateTask(taskID, update.getMessage().getText());
+                    } catch (DataAccessException e) {
+                        log.error(e.getMessage());
+                    }
+                    sendMessage(chatId, "Done!", startStateKeyboard());
+                    sendMessage(chatId, "Your updated list", viewStateKeyboard(dataBaseControl.showList(update)));
+                    state = Statements.VIEW;
                     break;
             }
         } else if (update.hasCallbackQuery()) {
             String chatId = update.getCallbackQuery().getMessage().getChatId().toString();
             String callBack = update.getCallbackQuery().getData();
 
-            System.out.println(update.getCallbackQuery().getData());
             switch (state) {
                 case VIEW:
                     switch (callBack) {
+                        case "EMPTY_LIST":
+                            sendMessage(chatId, "Your list is empty, please add something", startStateKeyboard());
+                            break;
                         case "UPDATE":
                             sendMessage(chatId, "Choose the reminder to update");
                             state = Statements.EDIT;
@@ -134,15 +148,20 @@ public class TelegramBot extends TelegramLongPollingBot {
                             sendMessage(chatId, "Choose the reminder to delete");
                             state = Statements.DELETE;
                             break;
-                        default:
-                            sendMessage(chatId, "Unknown command", startStateKeyboard());
-                            state = Statements.START;
-                            break;
                     }
                     break;
                 case EDIT:
-                    taskID = new StringBuilder().append(callBack);
-                    sendMessage(chatId, "Write yours updated reminder", new ReplyKeyboardRemove(true));
+                    taskID.put(chatId, callBack);
+                    sendMessage(chatId, "Write your updated reminder", new ReplyKeyboardRemove(true));
+                    break;
+                case DELETE:
+                    try {
+                        dataBaseControl.deleteTask(callBack);
+                    } catch (DataAccessException e) {
+                        log.error(e.getMessage());
+                    }
+                    sendMessage(chatId, "Your current reminder list", viewStateKeyboard(dataBaseControl.showList(update)));
+                    state = Statements.VIEW;
                     break;
             }
         }
@@ -158,10 +177,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             List<InlineKeyboardButton> buttonList = new ArrayList<>();
 
-            inlineKeyboardButton.setText("EMPTY");
-            inlineKeyboardButton.setCallbackData("EMPTY LIST");
+            inlineKeyboardButton.setText("Empty");
+            inlineKeyboardButton.setCallbackData("EMPTY_LIST");
             buttonList.add(inlineKeyboardButton);
             rowButton.add(buttonList);
+            inlineKeyboardMarkup.setKeyboard(rowButton);
+            return inlineKeyboardMarkup;
         }
 
         int i = 1;
@@ -174,6 +195,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             buttonList.add(inlineKeyboardButton);
             rowButton.add(buttonList);
+
         }
 
         List<InlineKeyboardButton> buttonList = new ArrayList<>();
@@ -207,16 +229,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         keyboardRows.add(row);
 
-        row = new KeyboardRow();
-
-        row.add("Delete reminder");
-        row.add("****");
-
-        keyboardRows.add(row);
-
         replyKeyboardMarkup.setKeyboard(keyboardRows);
         replyKeyboardMarkup.setResizeKeyboard(true);
-        replyKeyboardMarkup.setOneTimeKeyboard(true);
 
         return replyKeyboardMarkup;
     }

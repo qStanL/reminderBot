@@ -14,7 +14,7 @@ import ua.onpu.TelegramBot;
 @Component
 @Log4j
 public class BotInit {
-    @Autowired
+
     private TelegramBot bot;
 
     @EventListener({ContextRefreshedEvent.class})
@@ -28,6 +28,8 @@ public class BotInit {
         }
     }
 
-
-
+    @Autowired
+    public void setBot(TelegramBot bot) {
+        this.bot = bot;
+    }
 }
