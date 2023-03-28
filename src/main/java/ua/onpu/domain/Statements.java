@@ -1,4 +1,4 @@
-package ua.onpu;
+package ua.onpu.domain;
 
 public enum Statements {
     START,

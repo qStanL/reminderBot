@@ -20,6 +20,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.onpu.configuration.BotConfiguration;
+import ua.onpu.domain.Statements;
+import ua.onpu.model.DataBaseControl;
 import ua.onpu.model.Task;
 
 import java.util.ArrayList;
@@ -250,6 +252,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(chatId);
         message.setText(text);
         message.setReplyMarkup(keyboardButtons);
+        log.info("Answer to " + message.getChatId() + " : " + message.getText());
 
         validate(message);
     }

@@ -1,4 +1,4 @@
-package ua.onpu;
+package ua.onpu.model;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
