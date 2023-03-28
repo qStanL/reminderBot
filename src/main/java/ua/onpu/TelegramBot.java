@@ -79,7 +79,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             } catch (DataAccessException e) {
                                 log.error(e.getMessage());
                             }
-                            sendMessage(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option" + ":blush:"), startStateKeyboard());
+                            sendMessage(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option + :blush:"), startStateKeyboard());
                             break;
                         case "Reminder list":
                             state = Statements.VIEW;
@@ -181,6 +181,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             inlineKeyboardButton.setCallbackData("EMPTY_LIST");
             buttonList.add(inlineKeyboardButton);
             rowButton.add(buttonList);
+
             inlineKeyboardMarkup.setKeyboard(rowButton);
             return inlineKeyboardMarkup;
         }
@@ -212,6 +213,15 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         buttonList.add(button);
         rowButton.add(buttonList);
+
+        List<InlineKeyboardButton> b = new ArrayList<>();
+        InlineKeyboardButton button1 = new InlineKeyboardButton();
+
+        button1.setText(EmojiParser.parseToUnicode("Set deadline :watch:"));
+        button1.setCallbackData("TIME");
+
+        b.add(button1);
+        rowButton.add(b);
 
         inlineKeyboardMarkup.setKeyboard(rowButton);
         return inlineKeyboardMarkup;
