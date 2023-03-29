@@ -3,6 +3,7 @@ package ua.onpu.model;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ua.onpu.model.*;
@@ -49,13 +50,8 @@ public class DataBaseControl {
         assigmentRepository.save(assigment);
     }
 
-    public List<Task> showList(Update update) throws DataAccessException {
-        StringBuilder chatId = new StringBuilder();
-        if (update.hasMessage()) {
-            chatId.append(update.getMessage().getChatId());
-        } else if (update.hasCallbackQuery()) {
-            chatId.append(update.getCallbackQuery().getMessage().getChatId());
-        }
+    public List<Task> showList(Message message) throws DataAccessException {
+        Long chatId = message.getChatId();
 
         List<Assigment> assigments = assigmentRepository.findAllByUserChatId(Long.parseLong(String.valueOf(chatId)));
         List<Task> taskList = new ArrayList<>();
@@ -66,11 +62,20 @@ public class DataBaseControl {
         return taskList;
     }
 
-    public void registerUser(Message message) throws DataAccessException {
-        if (userRepository.findById(message.getChatId()).isEmpty()) {
-            User user = new User();
-            user.setChatId(message.getChatId());
-            user.setUserName(message.getChat().getUserName());
+    public List<Task> showList(CallbackQuery callbackQuery) throws DataAccessException {
+        Long chatId = callbackQuery.getMessage().getChatId();
+
+        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(chatId);
+        List<Task> taskList = new ArrayList<>();
+        for (Assigment a : assigments) {
+            taskList.add(a.getTask());
+        }
+
+        return taskList;
+    }
+
+    public void registerUser(User user) throws DataAccessException {
+        if (userRepository.findById(user.getChatId()).isEmpty()) {
             user.setRegisteredAt(LocalDateTime.now());
 
             userRepository.save(user);

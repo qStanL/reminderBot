@@ -23,6 +23,7 @@ import ua.onpu.configuration.BotConfiguration;
 import ua.onpu.domain.Statements;
 import ua.onpu.model.DataBaseControl;
 import ua.onpu.model.Task;
+import ua.onpu.process.Processor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,25 +35,29 @@ import java.util.Map;
 public class TelegramBot extends TelegramLongPollingBot {
 
     final BotConfiguration configuration;
+    private final DataBaseControl dataBaseControl;
+    private final Processor processor;
 
-    private DataBaseControl dataBaseControl;
-    private Statements state;
-    private final Map<String, String> taskID;
-
-    public TelegramBot(BotConfiguration configuration) {
+    @Autowired
+    public TelegramBot(BotConfiguration configuration, Processor processor, DataBaseControl dataBaseControl) {
         this.configuration = configuration;
+        this.processor = processor;
+        this.dataBaseControl = dataBaseControl;
 
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "start bot"));
         validate(new SetMyCommands(botCommands, new BotCommandScopeDefault(), null));
-        taskID = new HashMap<>();
-        state = Statements.START;
+    }
+
+    /*@Autowired
+    public void setProcessor(Processor processor) {
+        this.processor = processor;
     }
 
     @Autowired
     public void setDataBaseControl(DataBaseControl dataBaseControl) {
         this.dataBaseControl = dataBaseControl;
-    }
+    }*/
 
     @Override
     public String getBotUsername() {
@@ -67,13 +72,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-
-        if (update.hasMessage() && update.getMessage().hasText()) {
+        processor.process(update);
+        /*if (update.hasMessage() && update.getMessage().hasText()) {
             String chatId = update.getMessage().getChatId().toString();
             String command = update.getMessage().getText();
 
             switch (state) {
-                case START:
+                *//*case START:
                     switch (command) {
                         case "/start":
                             try {
@@ -81,7 +86,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             } catch (DataAccessException e) {
                                 log.error(e.getMessage());
                             }
-                            sendMessage(chatId, EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option + :blush:"), startStateKeyboard());
+                            sendMessage(chatId, , startStateKeyboard());
                             break;
                         case "Reminder list":
                             state = Statements.VIEW;
@@ -99,7 +104,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             sendMessage(chatId, EmojiParser.parseToUnicode("Please choose the option" + ":blush:"), startStateKeyboard());
                             break;
                     }
-                    break;
+                    break;*//*
                 case CREATE:
                     try {
                         dataBaseControl.makeRemind(update.getMessage());
@@ -166,7 +171,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     state = Statements.VIEW;
                     break;
             }
-        }
+        }*/
     }
 
     private ReplyKeyboard viewStateKeyboard(List<Task> list) {
@@ -229,23 +234,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         return inlineKeyboardMarkup;
     }
 
-    private ReplyKeyboard startStateKeyboard() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-
-        row.add("Make a new reminder");
-        row.add("Reminder list");
-
-        keyboardRows.add(row);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-
-        return replyKeyboardMarkup;
-    }
 
     private void sendMessage(String chatId, String text, ReplyKeyboard keyboardButtons) {
         SendMessage message = new SendMessage();
@@ -281,5 +269,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.error("Error: " + e.getMessage());
         }
     }
+
 
 }

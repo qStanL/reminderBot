@@ -1,36 +1,44 @@
 package ua.onpu.cache;
 
+import lombok.extern.log4j.Log4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
-import ua.onpu.domain.BotUser;
+import ua.onpu.model.DataBaseControl;
+import ua.onpu.model.User;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
-public class UsersCache implements Cache<BotUser> {
+@Log4j
+public class UsersCache implements Cache<User> {
 
-    private final Map<Long, BotUser> users;
+    private final Map<Long, User> users;
+    @Autowired
+    private DataBaseControl dataBaseControl;
 
     public UsersCache() {
         this.users = new HashMap<>();
     }
 
     @Override
-    public void add(BotUser botUser) {
-        if (botUser.getId() != null) {
-            users.put(botUser.getId(), botUser);
+    public void add(User user) {
+        users.put(user.getChatId(), user);
+
+        try {
+            dataBaseControl.registerUser(user);
+        } catch (DataAccessException e) {
+            log.error(e.getMessage());
         }
     }
 
     @Override
-    public BotUser findBy(Long id) {
+    public User findBy(Long id) {
         return users.get(id);
     }
 
     @Override
-    public List<BotUser> getAll() {
+    public List<User> getAll() {
         return new ArrayList<>(users.values());
     }
 }
