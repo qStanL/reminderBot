@@ -5,12 +5,15 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import ua.onpu.model.*;
+import ua.onpu.model.repository.AssigmentRepository;
+import ua.onpu.model.repository.TaskRepository;
+import ua.onpu.model.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class DataBaseControl {
@@ -34,6 +37,22 @@ public class DataBaseControl {
     @Autowired
     public void setAssigmentRepository(AssigmentRepository assigmentRepository) {
         this.assigmentRepository = assigmentRepository;
+    }
+
+    public Map<Long, User> getUsersMaps(){
+        Map<Long, User> userMap = new HashMap<>();
+
+        List<User> users = new ArrayList<>(userRepository.findAll());
+
+        for (User user : users){
+            userMap.put(user.getChatId(), user);
+        }
+
+        return userMap;
+    }
+
+    public void setUsersMap(Map<Long, User> usersMap) {
+        usersMap.forEach((aLong, user) -> userRepository.save(user));
     }
 
     public void makeRemind(Message message) throws DataAccessException {

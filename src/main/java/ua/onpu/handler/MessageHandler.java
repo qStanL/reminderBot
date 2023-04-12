@@ -1,7 +1,9 @@
 package ua.onpu.handler;
 
 import com.vdurmont.emoji.EmojiParser;
+import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@Log4j
 public class MessageHandler implements Handler<Message> {
 
     private final Cache<User> cache;
@@ -68,18 +71,31 @@ public class MessageHandler implements Handler<Message> {
                             break;
                     }
                     break;
-                case NEW_USER:
+                case CREATE:
+                try {
+                    dataBaseControl.makeRemind(message);
+                } catch (DataAccessException e){
+                    log.error(e.getMessage());
+                }
+                    messageSender.sendMessage(SendMessage.builder()
+                            .text(EmojiParser.parseToUnicode("Done! :blush:"))
+                            .chatId(message.getChatId())
+                            .replyMarkup(startStateKeyboard())
+                            .build());
                     user.setState(Statements.START);
                     break;
+
             }
         } else if (message.hasText()) {
             switch (message.getText()) {
                 case "/start":
                     cache.add(generateUserFromMessage(message));
-                    SendMessage sendMessage = new SendMessage();
-                    sendMessage.setChatId(String.valueOf(message.getChatId()));
-                    sendMessage.setText(EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option + :blush:"));
-                    sendMessage.setReplyMarkup(startStateKeyboard());
+                    messageSender.sendMessage(SendMessage.builder()
+                            .chatId(message.getChatId().toString())
+                            .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option :blush:"))
+                            .replyMarkup(startStateKeyboard())
+                            .build());
+
                     break;
             }
         }
@@ -89,7 +105,7 @@ public class MessageHandler implements Handler<Message> {
         User user = new User();
         user.setUserName(message.getFrom().getUserName());
         user.setChatId(message.getChatId());
-        user.setState(Statements.NEW_USER);
+        user.setState(Statements.START);
 
         return user;
     }

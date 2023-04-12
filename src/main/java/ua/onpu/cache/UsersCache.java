@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import ua.onpu.model.DataBaseControl;
 import ua.onpu.model.User;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.util.*;
 
 @Component
@@ -19,6 +21,16 @@ public class UsersCache implements Cache<User> {
 
     public UsersCache() {
         this.users = new HashMap<>();
+    }
+
+    @PostConstruct
+    public void init() {
+        users.putAll(dataBaseControl.getUsersMaps());
+    }
+
+    @PreDestroy
+    public void saveStatements() {
+        dataBaseControl.setUsersMap(users);
     }
 
     @Override

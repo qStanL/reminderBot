@@ -10,12 +10,15 @@ import ua.onpu.handler.MessageHandler;
 @Component
 public class ProcessorImpl implements Processor {
 
-    private final CallbackQuerryHandler callBackQuerryHandler;
-    private final MessageHandler messageHandler;
+    private CallbackQuerryHandler callBackQuerryHandler;
+    private MessageHandler messageHandler;
 
     @Autowired
-    public ProcessorImpl(CallbackQuerryHandler callBackQuerryHandler, MessageHandler messageHandler) {
+    public void setCallBackQuerryHandler(CallbackQuerryHandler callBackQuerryHandler){
         this.callBackQuerryHandler = callBackQuerryHandler;
+    }
+    @Autowired
+    public void setMessageHandler(MessageHandler messageHandler){
         this.messageHandler = messageHandler;
     }
 
