@@ -42,10 +42,20 @@ public class MessageHandler implements Handler<Message> {
     public void choose(Message message) {
         User user = cache.findBy(message.getChatId());
         if (user != null) {
+            if (message.getText().equals("/start")) {
+                cache.add(generateUserFromMessage(message));
+                messageSender.sendMessage(SendMessage.builder()
+                        .chatId(message.getChatId().toString())
+                        .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option :blush:"))
+                        .replyMarkup(startStateKeyboard())
+                        .build());
+            }
             switch (user.getState()) {
+
                 case START:
                     String command = message.getText();
                     switch (command) {
+
                         case "Reminder list":
                             user.setState(Statements.VIEW);
                             messageSender.sendMessage(SendMessage.builder()
@@ -62,21 +72,14 @@ public class MessageHandler implements Handler<Message> {
                                     .replyMarkup(new ReplyKeyboardRemove(true))
                                     .build());
                             break;
-                        default:
-                            messageSender.sendMessage(SendMessage.builder()
-                                    .text(EmojiParser.parseToUnicode("Please, choose the option :blush:"))
-                                    .chatId(message.getChatId())
-                                    .replyMarkup(startStateKeyboard())
-                                    .build());
-                            break;
                     }
                     break;
                 case CREATE:
-                try {
-                    dataBaseControl.makeRemind(message);
-                } catch (DataAccessException e){
-                    log.error(e.getMessage());
-                }
+                    try {
+                        dataBaseControl.makeRemind(message);
+                    } catch (DataAccessException e) {
+                        log.error(e.getMessage());
+                    }
                     messageSender.sendMessage(SendMessage.builder()
                             .text(EmojiParser.parseToUnicode("Done! :blush:"))
                             .chatId(message.getChatId())
@@ -86,19 +89,8 @@ public class MessageHandler implements Handler<Message> {
                     break;
 
             }
-        } else if (message.hasText()) {
-            switch (message.getText()) {
-                case "/start":
-                    cache.add(generateUserFromMessage(message));
-                    messageSender.sendMessage(SendMessage.builder()
-                            .chatId(message.getChatId().toString())
-                            .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBOT. Please choose the option :blush:"))
-                            .replyMarkup(startStateKeyboard())
-                            .build());
-
-                    break;
-            }
         }
+
     }
 
     private User generateUserFromMessage(Message message) {
