@@ -6,5 +6,7 @@ public enum Statements {
     CREATE,
     VIEW,
     EDIT,
+    EDIT_PROCESSING,
+    DELETE_PROCESSING,
     DELETE
 }
