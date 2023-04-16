@@ -1,6 +1,8 @@
-package ua.onpu.model;
+package ua.onpu.model.repository;
 
 import org.springframework.data.repository.CrudRepository;
+import ua.onpu.model.Assigment;
+import ua.onpu.model.Task;
 
 import java.util.List;
 

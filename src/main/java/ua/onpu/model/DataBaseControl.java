@@ -1,15 +1,19 @@
-package ua.onpu;
+package ua.onpu.model;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import ua.onpu.model.*;
+import ua.onpu.model.repository.AssigmentRepository;
+import ua.onpu.model.repository.TaskRepository;
+import ua.onpu.model.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class DataBaseControl {
@@ -35,6 +39,22 @@ public class DataBaseControl {
         this.assigmentRepository = assigmentRepository;
     }
 
+    public Map<Long, User> getUsersMaps(){
+        Map<Long, User> userMap = new HashMap<>();
+
+        List<User> users = new ArrayList<>(userRepository.findAll());
+
+        for (User user : users){
+            userMap.put(user.getChatId(), user);
+        }
+
+        return userMap;
+    }
+
+    public void setUsersMap(Map<Long, User> usersMap) {
+        usersMap.forEach((aLong, user) -> userRepository.save(user));
+    }
+
     public void makeRemind(Message message) throws DataAccessException {
         Task task = new Task();
         task.setTaskText(message.getText());
@@ -49,13 +69,8 @@ public class DataBaseControl {
         assigmentRepository.save(assigment);
     }
 
-    public List<Task> showList(Update update) throws DataAccessException {
-        StringBuilder chatId = new StringBuilder();
-        if (update.hasMessage()) {
-            chatId.append(update.getMessage().getChatId());
-        } else if (update.hasCallbackQuery()) {
-            chatId.append(update.getCallbackQuery().getMessage().getChatId());
-        }
+    public List<Task> showList(Message message) throws DataAccessException {
+        Long chatId = message.getChatId();
 
         List<Assigment> assigments = assigmentRepository.findAllByUserChatId(Long.parseLong(String.valueOf(chatId)));
         List<Task> taskList = new ArrayList<>();
@@ -66,11 +81,20 @@ public class DataBaseControl {
         return taskList;
     }
 
-    public void registerUser(Message message) throws DataAccessException {
-        if (userRepository.findById(message.getChatId()).isEmpty()) {
-            User user = new User();
-            user.setChatId(message.getChatId());
-            user.setUserName(message.getChat().getUserName());
+    public List<Task> showList(CallbackQuery callbackQuery) throws DataAccessException {
+        Long chatId = callbackQuery.getMessage().getChatId();
+
+        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(chatId);
+        List<Task> taskList = new ArrayList<>();
+        for (Assigment a : assigments) {
+            taskList.add(a.getTask());
+        }
+
+        return taskList;
+    }
+
+    public void registerUser(User user) throws DataAccessException {
+        if (userRepository.findById(user.getChatId()).isEmpty()) {
             user.setRegisteredAt(LocalDateTime.now());
 
             userRepository.save(user);
