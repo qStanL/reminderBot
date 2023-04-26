@@ -16,20 +16,28 @@ import java.util.*;
 public class UsersCache implements Cache<User> {
 
     private final Map<Long, User> users;
-    @Autowired
-    private DataBaseControl dataBaseControl;
 
-    public UsersCache() {
+    private final DataBaseControl dataBaseControl;
+
+    @Autowired
+    public UsersCache(DataBaseControl dataBaseControl) {
         this.users = new HashMap<>();
+        this.dataBaseControl = dataBaseControl;
     }
 
     @PostConstruct
-    public void init() {
+    public void initUsers() {
         users.putAll(dataBaseControl.getUsersMaps());
     }
 
     @PreDestroy
-    public void saveStatements() {
+    public void saveUsers() {
+
+        users.forEach(((aLong, user) -> {
+            user.setGroupToShow(null);
+            user.setTaskIdToManipulate(null);
+        }));
+
         dataBaseControl.setUsersMap(users);
     }
 

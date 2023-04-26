@@ -3,17 +3,14 @@ package ua.onpu.model;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import ua.onpu.model.repository.AssigmentRepository;
 import ua.onpu.model.repository.TaskRepository;
 import ua.onpu.model.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class DataBaseControl {
@@ -39,12 +36,12 @@ public class DataBaseControl {
         this.assigmentRepository = assigmentRepository;
     }
 
-    public Map<Long, User> getUsersMaps(){
+    public Map<Long, User> getUsersMaps() {
         Map<Long, User> userMap = new HashMap<>();
 
         List<User> users = new ArrayList<>(userRepository.findAll());
 
-        for (User user : users){
+        for (User user : users) {
             userMap.put(user.getChatId(), user);
         }
 
@@ -55,7 +52,7 @@ public class DataBaseControl {
         usersMap.forEach((aLong, user) -> userRepository.save(user));
     }
 
-    public void makeRemind(Message message) throws DataAccessException {
+    public Long makeRemind(Message message) throws DataAccessException {
         Task task = new Task();
         task.setTaskText(message.getText());
         taskRepository.save(task);
@@ -67,27 +64,33 @@ public class DataBaseControl {
 
         assigment.setTask(task);
         assigmentRepository.save(assigment);
+
+        return task.getTaskId();
     }
 
-    public List<Task> showList(Message message) throws DataAccessException {
-        Long chatId = message.getChatId();
-
-        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(Long.parseLong(String.valueOf(chatId)));
+    public List<Task> showList(Long chatId) throws DataAccessException {
+        List<Assigment> assignments = assigmentRepository.findAllByUserChatId(chatId);
         List<Task> taskList = new ArrayList<>();
-        for (Assigment a : assigments) {
+        for (Assigment a : assignments) {
             taskList.add(a.getTask());
         }
 
         return taskList;
     }
 
-    public List<Task> showList(CallbackQuery callbackQuery) throws DataAccessException {
-        Long chatId = callbackQuery.getMessage().getChatId();
+    public List<Task> showList(Long chatId, String group) throws DataAccessException {
+        if (group.equals("all")) {
+            return showList(chatId);
+        }
 
-        List<Assigment> assigments = assigmentRepository.findAllByUserChatId(chatId);
+        List<Assigment> assignments = assigmentRepository.findAllByUserChatId(chatId);
         List<Task> taskList = new ArrayList<>();
-        for (Assigment a : assigments) {
-            taskList.add(a.getTask());
+
+        for (Assigment a : assignments) {
+            Task task = a.getTask();
+            if (task.getTaskGroup() != null && task.getTaskGroup().equals(group)) {
+                taskList.add(a.getTask());
+            }
         }
 
         return taskList;
@@ -101,20 +104,38 @@ public class DataBaseControl {
         }
     }
 
-    public void updateTask(String taskID, String text) throws DataAccessException {
-        Task task = taskRepository.findByTaskId(Long.parseLong(taskID));
+    public void updateTask(String taskId, String text) throws DataAccessException {
+        Task task = taskRepository.findByTaskId(Long.parseLong(taskId));
         task.setTaskText(text);
 
         taskRepository.save(task);
     }
 
-    public void deleteTask(String taskID) throws DataAccessException {
-        Task task = taskRepository.findByTaskId(Long.parseLong(taskID));
+    public void deleteTask(String taskId) throws DataAccessException {
+        Task task = taskRepository.findByTaskId(Long.parseLong(taskId));
         Assigment assigment = assigmentRepository.findByTask(task);
         assigment.setUser(null);
         assigment.setTask(null);
 
         assigmentRepository.delete(assigment);
         taskRepository.delete(task);
+    }
+
+    public Set<String> groupList(Long chatId) {
+        List<Task> listTask = assigmentRepository.findAllByUserChatId(chatId)
+                .stream()
+                .map(Assigment::getTask)
+                .collect(Collectors.toList());
+
+
+        return listTask.stream()
+                .map(Task::getTaskGroup)
+                .collect(Collectors.toSet());
+    }
+
+    public void setGroup(Message message, String taskId) {
+        Task task = taskRepository.findByTaskId(Long.parseLong(taskId));
+        task.setTaskGroup(message.getText());
+        taskRepository.save(task);
     }
 }

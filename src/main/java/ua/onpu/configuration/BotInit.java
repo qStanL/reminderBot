@@ -10,7 +10,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import ua.onpu.TelegramBot;
 
-
 @Component
 @Log4j
 public class BotInit {

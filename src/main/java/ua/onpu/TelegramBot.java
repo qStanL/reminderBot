@@ -1,7 +1,5 @@
 package ua.onpu;
 
-
-
 import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,7 +13,6 @@ import ua.onpu.configuration.BotConfiguration;
 import ua.onpu.process.Processor;
 import java.util.ArrayList;
 import java.util.List;
-
 
 @Component
 @Log4j

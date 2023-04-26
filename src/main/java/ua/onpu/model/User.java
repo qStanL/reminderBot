@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import ua.onpu.domain.Statements;
-
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import java.time.LocalDateTime;
@@ -20,5 +19,5 @@ public class User {
     private LocalDateTime registeredAt;
     private Statements state;
     private String taskIdToManipulate;
-
+    private String groupToShow;
 }
