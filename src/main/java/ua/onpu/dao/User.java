@@ -1,4 +1,4 @@
-package ua.onpu.model;
+package ua.onpu.dao;
 
 import lombok.Getter;
 import lombok.Setter;

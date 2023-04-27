@@ -9,8 +9,9 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ua.onpu.configuration.BotConfiguration;
+import ua.onpu.config.BotConfiguration;
 import ua.onpu.process.Processor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ import java.util.List;
 @Log4j
 public class TelegramBot extends TelegramLongPollingBot {
 
-    final BotConfiguration configuration;
+    private final BotConfiguration configuration;
     private final Processor processor;
 
     @Autowired

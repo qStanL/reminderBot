@@ -14,10 +14,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
-import ua.onpu.messagesender.MessageSender;
-import ua.onpu.model.DataBaseControl;
-import ua.onpu.model.Task;
-import ua.onpu.model.User;
+import ua.onpu.service.MessageService;
+import ua.onpu.dao.DataBaseControl;
+import ua.onpu.dao.Task;
+import ua.onpu.dao.User;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,13 +28,13 @@ import java.util.Set;
 public class MessageHandler implements Handler<Message> {
 
     private final Cache<User> cache;
-    private final MessageSender messageSender;
+    private final MessageService messageService;
     private final DataBaseControl dataBaseControl;
 
 
-    public MessageHandler(Cache<User> cache, MessageSender messageSender, DataBaseControl dataBaseControl) {
+    public MessageHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl) {
         this.cache = cache;
-        this.messageSender = messageSender;
+        this.messageService = messageService;
         this.dataBaseControl = dataBaseControl;
 
     }
@@ -47,7 +47,7 @@ public class MessageHandler implements Handler<Message> {
 
             if (message.getText().equals("/start")) {
                 user.setState(Statements.START);
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBot. Please choose the option :blush:"))
                         .replyMarkup(startStateKeyboard())
@@ -59,13 +59,12 @@ public class MessageHandler implements Handler<Message> {
                 case VIEW:
                     switch (message.getText()) {
                         case "Reminder list":
-                            user.setState(Statements.VIEW);
-
-                            messageSender.sendMessage(SendMessage.builder()
+                            messageService.sendMessage(SendMessage.builder()
                                     .chatId(user.getChatId())
-                                    .text("Write a group to view it(all - for all reminders)\nAvailable groups:\n"
-                                            + dataBaseControl.groupList(user.getChatId()).toString())
-                                            .replyMarkup(new ReplyKeyboardRemove(true))
+                                    .text("Write a group to view it(`all` - for all reminders)\nAvailable groups:\n"
+                                            + dataBaseControl.groupList(user.getChatId()))
+                                    .parseMode(ParseMode.MARKDOWN)
+                                    .replyMarkup(new ReplyKeyboardRemove(true))
                                     .build());
 
                             user.setState(Statements.VIEW_PROCESSING);
@@ -73,7 +72,7 @@ public class MessageHandler implements Handler<Message> {
                         case "Make a new reminder":
                             user.setState(Statements.CREATE);
 
-                            messageSender.sendMessage(SendMessage.builder()
+                            messageService.sendMessage(SendMessage.builder()
                                     .chatId(user.getChatId())
                                     .text("Write your reminder")
                                     .replyMarkup(new ReplyKeyboardRemove(true))
@@ -83,7 +82,7 @@ public class MessageHandler implements Handler<Message> {
                     break;
                 case VIEW_PROCESSING:
                     user.setGroupToShow(message.getText());
-                    messageSender.sendMessage(SendMessage.builder()
+                    messageService.sendMessage(SendMessage.builder()
                             .chatId(user.getChatId())
                             .text("Your reminder list")
                             .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
@@ -94,7 +93,7 @@ public class MessageHandler implements Handler<Message> {
                     user.setTaskIdToManipulate(dataBaseControl.makeRemind(message).toString());
 
                     user.setState(Statements.CREATE_CONFIRMATION);
-                    messageSender.sendMessage(SendMessage.builder()
+                    messageService.sendMessage(SendMessage.builder()
                             .text(EmojiParser.parseToUnicode("Done!:blush:\nWrite group for the task \nIf you don't want to write it, just copy it - `GENERAL`"))
                             .chatId(user.getChatId())
                             .replyMarkup(new ReplyKeyboardRemove(true))
@@ -105,7 +104,7 @@ public class MessageHandler implements Handler<Message> {
                     dataBaseControl.setGroup(message, user.getTaskIdToManipulate());
 
                     user.setState(Statements.START);
-                    messageSender.sendMessage(SendMessage.builder()
+                    messageService.sendMessage(SendMessage.builder()
                             .text(EmojiParser.parseToUnicode("Done! :blush:"))
                             .chatId(user.getChatId())
                             .replyMarkup(startStateKeyboard())
@@ -115,10 +114,10 @@ public class MessageHandler implements Handler<Message> {
                     dataBaseControl.updateTask(user.getTaskIdToManipulate(), message.getText());
 
                     user.setState(Statements.VIEW);
-                    messageSender.sendMessage(SendMessage.builder()
+                    messageService.sendMessage(SendMessage.builder()
                             .chatId(user.getChatId())
                             .text("Done!")
-                            .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId())))
+                            .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                             .build());
                     break;
             }
@@ -126,7 +125,7 @@ public class MessageHandler implements Handler<Message> {
             user = generateUserFromMessage(message);
             cache.add(user);
 
-            messageSender.sendMessage(SendMessage.builder()
+            messageService.sendMessage(SendMessage.builder()
                     .chatId(user.getChatId())
                     .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBot. Please choose the option :blush:"))
                     .replyMarkup(startStateKeyboard())
@@ -207,14 +206,23 @@ public class MessageHandler implements Handler<Message> {
         buttonList.add(button);
         rowButton.add(buttonList);
 
-        List<InlineKeyboardButton> b = new ArrayList<>();
-        InlineKeyboardButton button1 = new InlineKeyboardButton();
+        /*buttonList = new ArrayList<>();
+        button = new InlineKeyboardButton();
 
-        button1.setText(EmojiParser.parseToUnicode("Set deadline :watch:"));
-        button1.setCallbackData("TIME");
+        button.setText(EmojiParser.parseToUnicode("Set deadline :watch:("));
+        button.setCallbackData("TIME");
 
-        b.add(button1);
-        rowButton.add(b);
+        buttonList.add(button);
+        rowButton.add(buttonList);*/
+
+        buttonList = new ArrayList<>();
+        button = new InlineKeyboardButton();
+
+        button.setText("Back");
+        button.setCallbackData("BACK");
+
+        buttonList.add(button);
+        rowButton.add(buttonList);
 
         inlineKeyboardMarkup.setKeyboard(rowButton);
         return inlineKeyboardMarkup;

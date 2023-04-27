@@ -4,8 +4,8 @@ import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
-import ua.onpu.model.DataBaseControl;
-import ua.onpu.model.User;
+import ua.onpu.dao.DataBaseControl;
+import ua.onpu.dao.User;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;

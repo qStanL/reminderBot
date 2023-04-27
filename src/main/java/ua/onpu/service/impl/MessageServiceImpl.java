@@ -1,4 +1,4 @@
-package ua.onpu.messagesender;
+package ua.onpu.service.impl;
 
 import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,16 +7,16 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ua.onpu.TelegramBot;
-import ua.onpu.messagesender.MessageSender;
+import ua.onpu.service.MessageService;
 
 @Log4j
 @Service
-class MessageSenderImpl implements MessageSender {
+class MessageServiceImpl implements MessageService {
 
     private final TelegramBot telegramBot;
 
     @Autowired
-    public MessageSenderImpl(@Lazy TelegramBot telegramBot) {
+    public MessageServiceImpl(@Lazy TelegramBot telegramBot) {
         this.telegramBot = telegramBot;
     }
 

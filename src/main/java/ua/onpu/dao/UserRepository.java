@@ -1,7 +1,6 @@
-package ua.onpu.model.repository;
+package ua.onpu.dao;
 
 import org.springframework.data.repository.CrudRepository;
-import ua.onpu.model.User;
 
 import java.util.List;
 

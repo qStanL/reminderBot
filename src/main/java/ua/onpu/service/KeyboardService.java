@@ -1,8 +1,8 @@
-package ua.onpu.keyboardservice;
+package ua.onpu.service;
 
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import ua.onpu.model.User;
+import ua.onpu.dao.User;
 
 public interface KeyboardService {
 

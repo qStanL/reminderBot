@@ -10,7 +10,7 @@ public enum Statements {
     EDIT_PROCESSING,
     DELETE_PROCESSING,
     DELETE,
-    // TODO: logic for empty lst
-    EMPTY_LIST
+    EMPTY_LIST,
+    BACK
 
 }

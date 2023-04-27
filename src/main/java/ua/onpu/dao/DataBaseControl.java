@@ -1,12 +1,9 @@
-package ua.onpu.model;
+package ua.onpu.dao;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import ua.onpu.model.repository.AssigmentRepository;
-import ua.onpu.model.repository.TaskRepository;
-import ua.onpu.model.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;

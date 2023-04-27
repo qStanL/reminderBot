@@ -1,4 +1,4 @@
-package ua.onpu.configuration;
+package ua.onpu.config;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;

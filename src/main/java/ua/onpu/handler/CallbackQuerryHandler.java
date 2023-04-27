@@ -13,10 +13,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
-import ua.onpu.messagesender.MessageSender;
-import ua.onpu.model.DataBaseControl;
-import ua.onpu.model.Task;
-import ua.onpu.model.User;
+import ua.onpu.service.MessageService;
+import ua.onpu.dao.DataBaseControl;
+import ua.onpu.dao.Task;
+import ua.onpu.dao.User;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,13 +24,13 @@ import java.util.List;
 public class CallbackQuerryHandler implements Handler<CallbackQuery> {
 
     private final Cache<User> cache;
-    private final MessageSender messageSender;
+    private final MessageService messageService;
     private final DataBaseControl dataBaseControl;
 
     @Autowired
-    public CallbackQuerryHandler(Cache<User> cache, MessageSender messageSender, DataBaseControl dataBaseControl) {
+    public CallbackQuerryHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl) {
         this.cache = cache;
-        this.messageSender = messageSender;
+        this.messageService = messageService;
         this.dataBaseControl = dataBaseControl;
     }
 
@@ -47,21 +47,21 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
 
         switch (user.getState()) {
             case EDIT:
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Select reminder that you want to edit")
                         .build());
                 user.setState(Statements.EDIT_PROCESSING);
                 break;
             case EDIT_PROCESSING:
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Write your updated reminder")
                         .replyMarkup(new ReplyKeyboardRemove(true))
                         .build());
                 break;
             case DELETE:
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Select reminder that you want to delete")
                         .build());
@@ -71,21 +71,29 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                 // FIXME: 26.04.2023
                 dataBaseControl.deleteTask(user.getTaskIdToManipulate());
                 user.setState(Statements.VIEW);
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Done!")
-                        .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId())))
+                        .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
                 break;
             case EMPTY_LIST:
                 user.setState(Statements.START);
 
-                messageSender.sendMessage(SendMessage.builder()
+                messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text(EmojiParser.parseToUnicode("Your reminder list is empty, add something first"))
                         .replyMarkup(startStateKeyboard())
                         .build());
                 break;
+            case BACK:
+                user.setState(Statements.START);
+
+                messageService.sendMessage(SendMessage.builder()
+                        .chatId(user.getChatId())
+                        .text(EmojiParser.parseToUnicode("You have been returned to start. Please choose the option :blush:"))
+                        .replyMarkup(startStateKeyboard())
+                        .build());
         }
 
     }
