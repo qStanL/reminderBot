@@ -11,6 +11,8 @@ public enum Statements {
     DELETE_PROCESSING,
     DELETE,
     EMPTY_LIST,
-    BACK
+    BACK,
+    DEADLINE,
+    DEADLINE_PARSING
 
 }

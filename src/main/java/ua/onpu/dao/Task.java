@@ -4,9 +4,8 @@ package ua.onpu.dao;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-
 import javax.persistence.*;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity(name = "task")
 @Getter
@@ -18,7 +17,7 @@ public class Task {
     private long taskId;
     @Column(nullable = false)
     private String taskText;
-    private LocalDateTime taskDeadline;
+    private Date taskDeadline;
     private String taskGroup;
 
 }

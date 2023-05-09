@@ -4,8 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
-
-import java.time.LocalDateTime;
+import ua.onpu.service.DateParser;
+import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,6 +17,8 @@ public class DataBaseControl {
     private TaskRepository taskRepository;
 
     private AssigmentRepository assigmentRepository;
+    @Autowired
+    private DateParser dateParser;
 
     @Autowired
     public void setUserRepository(UserRepository userRepository) {
@@ -49,9 +51,10 @@ public class DataBaseControl {
         usersMap.forEach((aLong, user) -> userRepository.save(user));
     }
 
-    public Long makeRemind(Message message) throws DataAccessException {
+    public Long makeRemind(Message message, String group) throws DataAccessException {
         Task task = new Task();
         task.setTaskText(message.getText());
+        task.setTaskGroup(group);
         taskRepository.save(task);
 
         Assigment assigment = new Assigment();
@@ -76,7 +79,7 @@ public class DataBaseControl {
     }
 
     public List<Task> showList(Long chatId, String group) throws DataAccessException {
-        if (group.equals("all")) {
+        if (group.equals("ALL")) {
             return showList(chatId);
         }
 
@@ -95,8 +98,6 @@ public class DataBaseControl {
 
     public void registerUser(User user) throws DataAccessException {
         if (userRepository.findById(user.getChatId()).isEmpty()) {
-            user.setRegisteredAt(LocalDateTime.now());
-
             userRepository.save(user);
         }
     }
@@ -119,20 +120,36 @@ public class DataBaseControl {
     }
 
     public Set<String> groupList(Long chatId) {
-        List<Task> listTask = assigmentRepository.findAllByUserChatId(chatId)
+        return assigmentRepository.findAllByUserChatId(chatId)
                 .stream()
                 .map(Assigment::getTask)
-                .collect(Collectors.toList());
-
-
-        return listTask.stream()
                 .map(Task::getTaskGroup)
                 .collect(Collectors.toSet());
     }
 
-    public void setGroup(Message message, String taskId) {
-        Task task = taskRepository.findByTaskId(Long.parseLong(taskId));
-        task.setTaskGroup(message.getText());
+    public void createDeadline(User user, String dateInString) {
+        Task task = taskRepository.findByTaskId(Long.valueOf(user.getTaskIdToManipulate()));
+
+        try {
+            Date date = dateParser.parse(dateInString);
+            task.setTaskDeadline(date);
+            System.out.println(task.getTaskDeadline());
+            taskRepository.save(task);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public List<Assigment> findByTaskTaskDeadlineIsNonNull() {
+        List<Assigment> list = (List<Assigment>) assigmentRepository.findAll();
+
+        return list.stream()
+                .filter(a -> a.getTask().getTaskDeadline() != null)
+                .collect(Collectors.toList());
+    }
+
+    public void completeDeadline(Task task) {
+        task.setTaskDeadline(null);
         taskRepository.save(task);
     }
 }

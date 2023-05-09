@@ -5,20 +5,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
+import ua.onpu.service.KeyboardService;
 import ua.onpu.service.MessageService;
 import ua.onpu.dao.DataBaseControl;
-import ua.onpu.dao.Task;
 import ua.onpu.dao.User;
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
 public class CallbackQuerryHandler implements Handler<CallbackQuery> {
@@ -26,12 +19,15 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
     private final Cache<User> cache;
     private final MessageService messageService;
     private final DataBaseControl dataBaseControl;
+    private final KeyboardService keyboardService;
+
 
     @Autowired
-    public CallbackQuerryHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl) {
+    public CallbackQuerryHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl, KeyboardService keyboardService) {
         this.cache = cache;
         this.messageService = messageService;
         this.dataBaseControl = dataBaseControl;
+        this.keyboardService = keyboardService;
     }
 
     @Override
@@ -40,17 +36,29 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
 
         if (callbackQuery.getData().matches("^\\d+$")) {
             user.setTaskIdToManipulate(callbackQuery.getData());
+        } else if (dataBaseControl.groupList(user.getChatId()).contains(callbackQuery.getData()) ||
+                callbackQuery.getData().equals("ALL")) {
+            user.setGroupToShow(callbackQuery.getData());
         } else {
             user.setState(Statements.valueOf(callbackQuery.getData()));
         }
 
-
         switch (user.getState()) {
+            case VIEW_PROCESSING:
+                messageService.sendMessage(SendMessage.builder()
+                        .chatId(user.getChatId())
+                        .text("Your reminder list")
+                        .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
+                        .build());
+
+                user.setState(Statements.START);
+                break;
             case EDIT:
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Select reminder that you want to edit")
                         .build());
+
                 user.setState(Statements.EDIT_PROCESSING);
                 break;
             case EDIT_PROCESSING:
@@ -68,13 +76,14 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                 user.setState(Statements.DELETE_PROCESSING);
                 break;
             case DELETE_PROCESSING:
-                // FIXME: 26.04.2023
                 dataBaseControl.deleteTask(user.getTaskIdToManipulate());
+
                 user.setState(Statements.VIEW);
+
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Done!")
-                        .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
+                        .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
                 break;
             case EMPTY_LIST:
@@ -82,8 +91,23 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
 
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
-                        .text(EmojiParser.parseToUnicode("Your reminder list is empty, add something first"))
-                        .replyMarkup(startStateKeyboard())
+                        .text(EmojiParser.parseToUnicode("Your reminder list is empty, add something"))
+                        .replyMarkup(keyboardService.startStateKeyboard())
+                        .build());
+                break;
+            case DEADLINE:
+                user.setState(Statements.DEADLINE_PARSING);
+                messageService.sendMessage(SendMessage.builder()
+                        .chatId(user.getChatId())
+                        .text(EmojiParser.parseToUnicode("Choose reminder to set deadline"))
+                        .build());
+                break;
+            case DEADLINE_PARSING:
+                messageService.sendMessage(SendMessage.builder()
+                        .chatId(user.getChatId())
+                        .text("Write the date and time\n" +
+                                "The following date formats are supported: \n'yyyy-MM-dd HH:mm:ss'")
+                        .replyMarkup(new ReplyKeyboardRemove(true))
                         .build());
                 break;
             case BACK:
@@ -92,87 +116,17 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text(EmojiParser.parseToUnicode("You have been returned to start. Please choose the option :blush:"))
-                        .replyMarkup(startStateKeyboard())
+                        .replyMarkup(keyboardService.startStateKeyboard())
                         .build());
+                break;
+            default:
+                messageService.sendMessage(SendMessage.builder()
+                        .chatId(user.getChatId())
+                        .text("First select the action below")
+                        .build());
+                break;
         }
 
-    }
-
-    private ReplyKeyboard startStateKeyboard() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-
-        row.add("Make a new reminder");
-        row.add("Reminder list");
-
-        keyboardRows.add(row);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-
-        return replyKeyboardMarkup;
-    }
-
-    private ReplyKeyboard viewProcessingStateKeyboard(List<Task> list) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-
-        List<List<InlineKeyboardButton>> rowButton = new ArrayList<>();
-
-        if (list.isEmpty()) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText("Empty");
-            inlineKeyboardButton.setCallbackData("EMPTY_LIST");
-            buttonList.add(inlineKeyboardButton);
-            rowButton.add(buttonList);
-
-            inlineKeyboardMarkup.setKeyboard(rowButton);
-            return inlineKeyboardMarkup;
-        }
-
-        int i = 1;
-        for (Task t : list) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText(i++ + ". " + t.getTaskText() + " -> " + t.getTaskGroup());
-            inlineKeyboardButton.setCallbackData(Long.toString(t.getTaskId()));
-
-            buttonList.add(inlineKeyboardButton);
-            rowButton.add(buttonList);
-        }
-
-        List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-        InlineKeyboardButton button = new InlineKeyboardButton();
-        button.setText("Edit");
-        button.setCallbackData("EDIT");
-
-        buttonList.add(button);
-
-        button = new InlineKeyboardButton();
-        button.setText("Delete");
-        button.setCallbackData("DELETE");
-
-        buttonList.add(button);
-        rowButton.add(buttonList);
-
-        List<InlineKeyboardButton> b = new ArrayList<>();
-        InlineKeyboardButton button1 = new InlineKeyboardButton();
-
-        button1.setText(EmojiParser.parseToUnicode("Set deadline :watch:"));
-        button1.setCallbackData("TIME");
-
-        b.add(button1);
-        rowButton.add(b);
-
-        inlineKeyboardMarkup.setKeyboard(rowButton);
-        return inlineKeyboardMarkup;
     }
 
 }

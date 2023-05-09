@@ -35,7 +35,7 @@ public class UsersCache implements Cache<User> {
 
         users.forEach(((aLong, user) -> {
             user.setGroupToShow(null);
-            user.setTaskIdToManipulate(null);
+            user.setGroupToCreate(null);
         }));
 
         dataBaseControl.setUsersMap(users);

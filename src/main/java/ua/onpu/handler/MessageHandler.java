@@ -6,22 +6,13 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
+import ua.onpu.service.KeyboardService;
 import ua.onpu.service.MessageService;
 import ua.onpu.dao.DataBaseControl;
-import ua.onpu.dao.Task;
 import ua.onpu.dao.User;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 @Component
 @Log4j
@@ -30,12 +21,14 @@ public class MessageHandler implements Handler<Message> {
     private final Cache<User> cache;
     private final MessageService messageService;
     private final DataBaseControl dataBaseControl;
+    private final KeyboardService keyboardService;
 
 
-    public MessageHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl) {
+    public MessageHandler(Cache<User> cache, MessageService messageService, DataBaseControl dataBaseControl, KeyboardService keyboardService) {
         this.cache = cache;
         this.messageService = messageService;
         this.dataBaseControl = dataBaseControl;
+        this.keyboardService = keyboardService;
 
     }
 
@@ -50,21 +43,21 @@ public class MessageHandler implements Handler<Message> {
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBot. Please choose the option :blush:"))
-                        .replyMarkup(startStateKeyboard())
+                        .replyMarkup(keyboardService.startStateKeyboard())
                         .build());
             }
 
             switch (user.getState()) {
                 case START:
                 case VIEW:
+                case VIEW_PROCESSING:
                     switch (message.getText()) {
                         case "Reminder list":
                             messageService.sendMessage(SendMessage.builder()
                                     .chatId(user.getChatId())
-                                    .text("Write a group to view it(`all` - for all reminders)\nAvailable groups:\n"
-                                            + dataBaseControl.groupList(user.getChatId()))
+                                    .text("Choose group to view it\nAvailable groups:\n")
                                     .parseMode(ParseMode.MARKDOWN)
-                                    .replyMarkup(new ReplyKeyboardRemove(true))
+                                    .replyMarkup(keyboardService.viewStateKeyboard(dataBaseControl.groupList(user.getChatId())))
                                     .build());
 
                             user.setState(Statements.VIEW_PROCESSING);
@@ -73,52 +66,54 @@ public class MessageHandler implements Handler<Message> {
                             user.setState(Statements.CREATE);
 
                             messageService.sendMessage(SendMessage.builder()
+                                    .text(EmojiParser.parseToUnicode("Before create task write group for the task, please" +
+                                            "\nIf you don't want to write it, just copy it - `GENERAL`"))
                                     .chatId(user.getChatId())
-                                    .text("Write your reminder")
                                     .replyMarkup(new ReplyKeyboardRemove(true))
+                                    .parseMode(ParseMode.MARKDOWN)
                                     .build());
                             break;
                     }
                     break;
-                case VIEW_PROCESSING:
-                    user.setGroupToShow(message.getText());
-                    messageService.sendMessage(SendMessage.builder()
-                            .chatId(user.getChatId())
-                            .text("Your reminder list")
-                            .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
-                            .build());
-                    user.setState(Statements.START);
-                    break;
                 case CREATE:
-                    user.setTaskIdToManipulate(dataBaseControl.makeRemind(message).toString());
+                    user.setGroupToCreate(message.getText());
 
                     user.setState(Statements.CREATE_CONFIRMATION);
                     messageService.sendMessage(SendMessage.builder()
-                            .text(EmojiParser.parseToUnicode("Done!:blush:\nWrite group for the task \nIf you don't want to write it, just copy it - `GENERAL`"))
                             .chatId(user.getChatId())
+                            .text("Now write your reminder")
                             .replyMarkup(new ReplyKeyboardRemove(true))
-                            .parseMode(ParseMode.MARKDOWN)
                             .build());
                     break;
                 case CREATE_CONFIRMATION:
-                    dataBaseControl.setGroup(message, user.getTaskIdToManipulate());
+                    dataBaseControl.makeRemind(message, user.getGroupToCreate());
 
                     user.setState(Statements.START);
                     messageService.sendMessage(SendMessage.builder()
                             .text(EmojiParser.parseToUnicode("Done! :blush:"))
                             .chatId(user.getChatId())
-                            .replyMarkup(startStateKeyboard())
+                            .replyMarkup(keyboardService.startStateKeyboard())
                             .build());
                     break;
                 case EDIT_PROCESSING:
                     dataBaseControl.updateTask(user.getTaskIdToManipulate(), message.getText());
 
-                    user.setState(Statements.VIEW);
                     messageService.sendMessage(SendMessage.builder()
                             .chatId(user.getChatId())
                             .text("Done!")
-                            .replyMarkup(viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
+                            .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                             .build());
+                    user.setState(Statements.VIEW);
+                    break;
+                case DEADLINE_PARSING:
+                    dataBaseControl.createDeadline(user, message.getText());
+
+                    messageService.sendMessage(SendMessage.builder()
+                            .chatId(user.getChatId())
+                            .text("Done!")
+                            .replyMarkup(new ReplyKeyboardRemove(true))
+                            .build());
+
                     break;
             }
         } else {
@@ -128,7 +123,7 @@ public class MessageHandler implements Handler<Message> {
             messageService.sendMessage(SendMessage.builder()
                     .chatId(user.getChatId())
                     .text(EmojiParser.parseToUnicode("Hello, i'm ReminderBot. Please choose the option :blush:"))
-                    .replyMarkup(startStateKeyboard())
+                    .replyMarkup(keyboardService.startStateKeyboard())
                     .build());
         }
     }
@@ -142,123 +137,4 @@ public class MessageHandler implements Handler<Message> {
         return user;
     }
 
-    private ReplyKeyboard startStateKeyboard() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-        KeyboardRow row = new KeyboardRow();
-
-        row.add("Make a new reminder");
-        row.add("Reminder list");
-
-        keyboardRows.add(row);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-
-        return replyKeyboardMarkup;
-    }
-
-    private ReplyKeyboard viewProcessingStateKeyboard(List<Task> list) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-
-        List<List<InlineKeyboardButton>> rowButton = new ArrayList<>();
-
-        if (list.isEmpty()) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText("Empty");
-            inlineKeyboardButton.setCallbackData("EMPTY_LIST");
-            buttonList.add(inlineKeyboardButton);
-            rowButton.add(buttonList);
-
-            inlineKeyboardMarkup.setKeyboard(rowButton);
-            return inlineKeyboardMarkup;
-        }
-
-        int i = 1;
-        for (Task t : list) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText(i++ + ". " + t.getTaskText() + " -> " + t.getTaskGroup());
-            inlineKeyboardButton.setCallbackData(Long.toString(t.getTaskId()));
-
-            buttonList.add(inlineKeyboardButton);
-            rowButton.add(buttonList);
-        }
-
-        List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-        InlineKeyboardButton button = new InlineKeyboardButton();
-        button.setText("Edit");
-        button.setCallbackData("EDIT");
-
-        buttonList.add(button);
-
-        button = new InlineKeyboardButton();
-        button.setText("Delete");
-        button.setCallbackData("DELETE");
-
-        buttonList.add(button);
-        rowButton.add(buttonList);
-
-        /*buttonList = new ArrayList<>();
-        button = new InlineKeyboardButton();
-
-        button.setText(EmojiParser.parseToUnicode("Set deadline :watch:("));
-        button.setCallbackData("TIME");
-
-        buttonList.add(button);
-        rowButton.add(buttonList);*/
-
-        buttonList = new ArrayList<>();
-        button = new InlineKeyboardButton();
-
-        button.setText("Back");
-        button.setCallbackData("BACK");
-
-        buttonList.add(button);
-        rowButton.add(buttonList);
-
-        inlineKeyboardMarkup.setKeyboard(rowButton);
-        return inlineKeyboardMarkup;
-    }
-
-    private ReplyKeyboard viewStateKeyboard(Long chatId) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
-
-        Set<String> group = dataBaseControl.groupList(chatId);
-        if (group.isEmpty()) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText("Add at least one reminder");
-            inlineKeyboardButton.setCallbackData("EMPTY_LIST");
-
-            buttonList.add(inlineKeyboardButton);
-            rowsInLine.add(buttonList);
-
-            inlineKeyboardMarkup.setKeyboard(rowsInLine);
-            return inlineKeyboardMarkup;
-        }
-
-        for (String g : group) {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            List<InlineKeyboardButton> buttonList = new ArrayList<>();
-
-            inlineKeyboardButton.setText("GENERAL");
-            inlineKeyboardButton.setCallbackData("GENERAL");
-
-            buttonList.add(inlineKeyboardButton);
-            rowsInLine.add(buttonList);
-        }
-
-        inlineKeyboardMarkup.setKeyboard(rowsInLine);
-        return inlineKeyboardMarkup;
-    }
 }

@@ -6,7 +6,6 @@ import lombok.ToString;
 import ua.onpu.domain.Statements;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import java.time.LocalDateTime;
 
 @Entity(name = "usersData")
 @Getter
@@ -16,8 +15,8 @@ public class User {
     @Id
     private long chatId;
     private String userName;
-    private LocalDateTime registeredAt;
     private Statements state;
     private String taskIdToManipulate;
+    private String groupToCreate;
     private String groupToShow;
 }
