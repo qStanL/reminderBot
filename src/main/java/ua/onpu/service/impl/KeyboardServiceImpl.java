@@ -6,9 +6,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import ua.onpu.dao.DataBaseControl;
-import ua.onpu.dao.Task;
+import ua.onpu.entity.Task;
 import ua.onpu.service.KeyboardService;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;

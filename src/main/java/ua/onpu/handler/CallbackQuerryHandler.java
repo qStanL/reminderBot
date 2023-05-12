@@ -10,8 +10,8 @@ import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
 import ua.onpu.service.KeyboardService;
 import ua.onpu.service.MessageService;
-import ua.onpu.dao.DataBaseControl;
-import ua.onpu.dao.User;
+import ua.onpu.entity.DataBaseControl;
+import ua.onpu.entity.User;
 
 @Component
 public class CallbackQuerryHandler implements Handler<CallbackQuery> {
@@ -106,7 +106,7 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
                         .text("Write the date and time\n" +
-                                "The following date formats are supported: \n'yyyy-MM-dd HH:mm:ss'")
+                                "The following date formats are supported: \n'yyyy-MM-dd HH:mm:ss'\n'yyyy-MM-dd HH:mm'")
                         .replyMarkup(new ReplyKeyboardRemove(true))
                         .build());
                 break;

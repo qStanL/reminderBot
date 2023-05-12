@@ -1,9 +1,12 @@
-package ua.onpu.dao;
+package ua.onpu.entity;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import ua.onpu.repository.AssigmentRepository;
+import ua.onpu.repository.TaskRepository;
+import ua.onpu.repository.UserRepository;
 import ua.onpu.service.DateParser;
 import java.text.ParseException;
 import java.util.*;
@@ -149,7 +152,9 @@ public class DataBaseControl {
     }
 
     public void completeDeadline(Task task) {
-        task.setTaskDeadline(null);
-        taskRepository.save(task);
+        Assigment a = assigmentRepository.findByTask(task);
+
+        assigmentRepository.delete(a);
+        taskRepository.delete(task);
     }
 }

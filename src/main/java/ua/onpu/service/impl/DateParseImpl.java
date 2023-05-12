@@ -12,6 +12,6 @@ public class DateParseImpl implements DateParser {
     @Override
     public Date parse(String date) throws ParseException {
         return DateUtils.parseDate(date,
-                "yyyy-MM-dd HH:mm:ss");
+                "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm");
     }
 }

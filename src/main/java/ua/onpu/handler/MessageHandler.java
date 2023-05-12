@@ -11,8 +11,8 @@ import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
 import ua.onpu.service.KeyboardService;
 import ua.onpu.service.MessageService;
-import ua.onpu.dao.DataBaseControl;
-import ua.onpu.dao.User;
+import ua.onpu.entity.DataBaseControl;
+import ua.onpu.entity.User;
 
 @Component
 @Log4j
@@ -111,7 +111,7 @@ public class MessageHandler implements Handler<Message> {
                     messageService.sendMessage(SendMessage.builder()
                             .chatId(user.getChatId())
                             .text("Done!")
-                            .replyMarkup(new ReplyKeyboardRemove(true))
+                            .replyMarkup(keyboardService.startStateKeyboard())
                             .build());
 
                     break;

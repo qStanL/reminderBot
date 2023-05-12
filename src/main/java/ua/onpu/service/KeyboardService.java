@@ -2,7 +2,7 @@ package ua.onpu.service;
 
 
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
-import ua.onpu.dao.Task;
+import ua.onpu.entity.Task;
 import java.util.List;
 import java.util.Set;
 
