@@ -8,6 +8,7 @@ import ua.onpu.repository.AssigmentRepository;
 import ua.onpu.repository.TaskRepository;
 import ua.onpu.repository.UserRepository;
 import ua.onpu.service.DateParser;
+
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -130,17 +131,12 @@ public class DataBaseControl {
                 .collect(Collectors.toSet());
     }
 
-    public void createDeadline(User user, String dateInString) {
+    public void createDeadline(User user, String dateInString) throws ParseException {
         Task task = taskRepository.findByTaskId(Long.valueOf(user.getTaskIdToManipulate()));
 
-        try {
-            Date date = dateParser.parse(dateInString);
-            task.setTaskDeadline(date);
-            System.out.println(task.getTaskDeadline());
-            taskRepository.save(task);
-        } catch (ParseException e) {
-            System.out.println(e.getMessage());
-        }
+        Date date = dateParser.parse(dateInString);
+        task.setTaskDeadline(date);
+        taskRepository.save(task);
     }
 
     public List<Assigment> findByTaskTaskDeadlineIsNonNull() {

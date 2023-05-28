@@ -25,7 +25,7 @@ public class RemindServiceImpl implements RemindService {
     }
 
     @Override
-    @Scheduled(fixedRate = 10_000)
+    @Scheduled(fixedRate = 10_000_000)
     public void remind() {
         List<Assigment> assigmentList = dataBaseControl.findByTaskTaskDeadlineIsNonNull();
         Date date = new Date();

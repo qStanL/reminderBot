@@ -4,7 +4,9 @@ import com.vdurmont.emoji.EmojiParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import ua.onpu.cache.Cache;
 import ua.onpu.domain.Statements;
@@ -51,12 +53,14 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                         .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
 
-                user.setState(Statements.START);
+                user.setState(Statements.VIEW);
                 break;
             case EDIT:
-                messageService.sendMessage(SendMessage.builder()
+                messageService.sendMessage(EditMessageText.builder()
                         .chatId(user.getChatId())
                         .text("Select reminder that you want to edit")
+                        .messageId(callbackQuery.getMessage().getMessageId())
+                        .replyMarkup((InlineKeyboardMarkup) keyboardService.viewProcessingStateKeyboardWithOutChangeButtons(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
 
                 user.setState(Statements.EDIT_PROCESSING);
@@ -67,24 +71,28 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                         .text("Write your updated reminder")
                         .replyMarkup(new ReplyKeyboardRemove(true))
                         .build());
+
                 break;
             case DELETE:
-                messageService.sendMessage(SendMessage.builder()
+                messageService.sendMessage(EditMessageText.builder()
                         .chatId(user.getChatId())
                         .text("Select reminder that you want to delete")
+                        .messageId(callbackQuery.getMessage().getMessageId())
+                        .replyMarkup((InlineKeyboardMarkup) keyboardService.viewProcessingStateKeyboardWithOutChangeButtons(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
+
                 user.setState(Statements.DELETE_PROCESSING);
                 break;
             case DELETE_PROCESSING:
                 dataBaseControl.deleteTask(user.getTaskIdToManipulate());
 
-                user.setState(Statements.VIEW);
-
                 messageService.sendMessage(SendMessage.builder()
                         .chatId(user.getChatId())
-                        .text("Done!")
+                        .text("Your current reminder list")
                         .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
+
+                user.setState(Statements.VIEW);
                 break;
             case EMPTY_LIST:
                 user.setState(Statements.START);
@@ -94,13 +102,17 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                         .text(EmojiParser.parseToUnicode("Your reminder list is empty, add something"))
                         .replyMarkup(keyboardService.startStateKeyboard())
                         .build());
+
                 break;
             case DEADLINE:
-                user.setState(Statements.DEADLINE_PARSING);
-                messageService.sendMessage(SendMessage.builder()
+                messageService.sendMessage(EditMessageText.builder()
                         .chatId(user.getChatId())
                         .text(EmojiParser.parseToUnicode("Choose reminder to set deadline"))
+                        .messageId(callbackQuery.getMessage().getMessageId())
+                        .replyMarkup((InlineKeyboardMarkup) keyboardService.viewProcessingStateKeyboardWithOutChangeButtons(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
+
+                user.setState(Statements.DEADLINE_PARSING);
                 break;
             case DEADLINE_PARSING:
                 messageService.sendMessage(SendMessage.builder()
@@ -119,12 +131,15 @@ public class CallbackQuerryHandler implements Handler<CallbackQuery> {
                         .replyMarkup(keyboardService.startStateKeyboard())
                         .build());
                 break;
-            default:
-                messageService.sendMessage(SendMessage.builder()
+            case CANCEL:
+                messageService.sendMessage(EditMessageText.builder()
                         .chatId(user.getChatId())
-                        .text("First select the action below")
+                        .text("You have been returned ")
+                        .messageId(callbackQuery.getMessage().getMessageId())
+                        .replyMarkup((InlineKeyboardMarkup) keyboardService.viewProcessingStateKeyboardWithOutChangeButtons(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                         .build());
-                break;
+
+                user.setState(Statements.VIEW);
         }
 
     }

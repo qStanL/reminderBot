@@ -10,6 +10,7 @@ public interface KeyboardService {
 
     ReplyKeyboard startStateKeyboard();
     ReplyKeyboard viewProcessingStateKeyboard(List<Task> list);
+    ReplyKeyboard viewProcessingStateKeyboardWithOutChangeButtons(List<Task> list);
     ReplyKeyboard viewStateKeyboard(Set<String> group);
 
 

@@ -13,6 +13,7 @@ public enum Statements {
     EMPTY_LIST,
     BACK,
     DEADLINE,
-    DEADLINE_PARSING
+    DEADLINE_PARSING,
+    CANCEL
 
 }

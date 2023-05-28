@@ -105,6 +105,50 @@ public class KeyboardServiceImpl implements KeyboardService {
     }
 
     @Override
+    public ReplyKeyboard viewProcessingStateKeyboardWithOutChangeButtons(List<Task> list) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> rowButton = new ArrayList<>();
+
+        if (list.isEmpty()) {
+            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+
+            List<InlineKeyboardButton> buttonList = new ArrayList<>();
+
+            inlineKeyboardButton.setText("Add at least one reminder");
+            inlineKeyboardButton.setCallbackData("EMPTY_LIST");
+            buttonList.add(inlineKeyboardButton);
+            rowButton.add(buttonList);
+
+            inlineKeyboardMarkup.setKeyboard(rowButton);
+            return inlineKeyboardMarkup;
+        }
+
+        int i = 1;
+        for (Task t : list) {
+            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+            List<InlineKeyboardButton> buttonList = new ArrayList<>();
+
+            inlineKeyboardButton.setText(i++ + ". " + t.getTaskText() + " -> " + t.getTaskGroup());
+            inlineKeyboardButton.setCallbackData(Long.toString(t.getTaskId()));
+
+            buttonList.add(inlineKeyboardButton);
+            rowButton.add(buttonList);
+        }
+
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        List<InlineKeyboardButton> buttonList = new ArrayList<>();
+        button.setText("Cancel");
+        button.setCallbackData("CANCEL");
+
+        buttonList.add(button);
+        rowButton.add(buttonList);
+
+        inlineKeyboardMarkup.setKeyboard(rowButton);
+        return inlineKeyboardMarkup;
+    }
+
+    @Override
     public ReplyKeyboard viewStateKeyboard(Set<String> group) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
