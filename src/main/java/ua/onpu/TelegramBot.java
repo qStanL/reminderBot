@@ -29,7 +29,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<BotCommand> botCommands = new ArrayList<>();
         botCommands.add(new BotCommand("/start", "start bot"));
-        validate(new SetMyCommands(botCommands, new BotCommandScopeDefault(), null));
+        setMenu(new SetMyCommands(botCommands, new BotCommandScopeDefault(), null));
     }
 
     @Override
@@ -48,7 +48,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         processor.process(update);
     }
 
-    private void validate(SetMyCommands commands) {
+    private void setMenu(SetMyCommands commands) {
         try {
             execute(commands);
         } catch (TelegramApiException e) {

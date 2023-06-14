@@ -90,6 +90,7 @@ public class MessageHandler implements Handler<Message> {
                     break;
                 case DEADLINE_PARSING:
                     try {
+
                         dataBaseControl.createDeadline(user, message.getText());
 
                         messageService.sendMessage(SendMessage.builder()
@@ -99,14 +100,16 @@ public class MessageHandler implements Handler<Message> {
                                 .build());
 
                         handleStartKeyboardCommand(message, user);
+                        user.setState(Statements.START);
                     } catch (ParseException e) {
+                        user.setState(Statements.VIEW);
                         messageService.sendMessage(SendMessage.builder()
                                 .chatId(user.getChatId())
                                 .text("Cant parse the date, please try again")
                                 .replyMarkup(keyboardService.viewProcessingStateKeyboard(dataBaseControl.showList(user.getChatId(), user.getGroupToShow())))
                                 .build());
 
-                        user.setState(Statements.VIEW);
+
                     }
                     break;
             }
